@@ -50,7 +50,7 @@ def openai_explain_code(code):
         return explanation
     except RateLimitError:
         print("Rate limit exceeded. Falling back to spaCy.")
-        return use_spacy_for_explanation(user_input)
+        return use_spacy_for_explanation(code)
     
 def use_spacy_for_explanation(user_input):
     doc = nlp(user_input)
