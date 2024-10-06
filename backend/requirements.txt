@@ -1,0 +1,5 @@
+Flask==2.0.1
+Werkzeug==2.0.1
+Flask-Cors==3.0.10
+openai==0.10.2
+gunicorn
