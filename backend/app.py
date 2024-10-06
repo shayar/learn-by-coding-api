@@ -10,7 +10,7 @@ from spacy.cli import download
 
 app = Flask(__name__)
 frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000/')
-CORS(app, origins=[frontend_url])  # Enable CORS to allow frontend interaction
+CORS(app, origins=[frontend_url], supports_credentials=True, allow_headers=["Content-Type"], methods=["GET", "POST", "OPTIONS"])  # Enable CORS to allow frontend interaction
 
 # Set your OpenAI API key here
 openai.api_key = os.getenv('OPENAI_API_KEY')
