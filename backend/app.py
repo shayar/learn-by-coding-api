@@ -28,7 +28,7 @@ def run_code():
 # Use OpenAI to dynamically explain code
 def openai_explain_code(code):
     response = openai.Completion.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         prompt=f"Explain the following Python code:\n{code}\nExplain it in a simple, detailed way.",
         temperature=0.7,
         max_tokens=150
