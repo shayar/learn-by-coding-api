@@ -31,16 +31,8 @@ const CodeEditor = () => {
 					new_code: currentCode,
 					old_code: previousCode,
 				});
-				setExplanation(
-					typeof response.data.explanation === 'object'
-						? JSON.stringify(response.data.explanation, null, 2)
-						: response.data.explanation
-				);
-				setDifference(
-					typeof response.data.diff === 'object'
-						? JSON.stringify(response.data.diff, null, 2)
-						: response.data.diff
-				);
+				setExplanation(response.data.explanation);
+				setDifference(response.data.diff);
 			} catch (error) {
 				setExplanation('Error generating explanation.');
 				setDifference('Error generating difference.');

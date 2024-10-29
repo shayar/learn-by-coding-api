@@ -12,18 +12,16 @@ app = Flask(__name__)
 frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000/')
 CORS(app, origins=[frontend_url], supports_credentials=True, allow_headers=["Content-Type"], methods=["GET", "POST", "OPTIONS"])
 
-# Set your OpenAI API key here
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
-# spaCy Model Handling
+# Load spaCy model
 try:
     nlp = spacy.load("en_core_web_sm")
 except OSError:
-    print("Downloading spaCy model...")
     download("en_core_web_sm")
     nlp = spacy.load("en_core_web_sm")
 
-# Run Python code using subprocess
+# Run Python code
 @app.route('/run', methods=['POST'])
 def run_code():
     data = request.json
@@ -34,14 +32,14 @@ def run_code():
     except subprocess.CalledProcessError as e:
         return jsonify({'error': e.output.decode('utf-8')}), 400
 
-# Use OpenAI to dynamically explain code
+# Generate a detailed explanation using OpenAI
 def openai_explain_code(code):
     try:
         response = openai.Completion.create(
             model="gpt-3.5-turbo",
-            prompt=f"Explain the following Python code:\n{code}\nExplain it in a simple, detailed way.",
-            temperature=0.7,
-            max_tokens=150
+            prompt=f"Explain the following Python code in detail:\n{code}\nExplain each line clearly.",
+            temperature=0.5,
+            max_tokens=200
         )
         explanation = response.choices[0].text.strip()
         return explanation
@@ -49,37 +47,41 @@ def openai_explain_code(code):
         print("Rate limit exceeded. Falling back to spaCy.")
         return use_spacy_for_explanation(code)
 
-# Fallback function using spaCy if OpenAI fails
+# Fallback explanation using spaCy
 def use_spacy_for_explanation(user_input):
     doc = nlp(user_input)
-    entities = [(ent.text, ent.label_) for ent in doc.ents]
-    tokens = [token.text for token in doc]
-    
-    explanation = {
-        "entities": entities,
-        "tokens": tokens,
-        "summary": f"Found {len(entities)} entities and {len(tokens)} tokens in the input."
-    }
-    
+    explanation = f"This code consists of {len(doc)} tokens. Here's a simple description:\n"
+    explanation += f"{' '.join([token.text for token in doc])}"
     return explanation
 
-# Unified route to explain the code and provide difference
+# Generate a human-readable diff
+def human_readable_diff(old_code, new_code):
+    diff = difflib.unified_diff(old_code.splitlines(), new_code.splitlines(), lineterm='')
+    changes = []
+    for line in diff:
+        if line.startswith('-'):
+            changes.append(f"Removed: {line[1:]}")
+        elif line.startswith('+'):
+            changes.append(f"Added: {line[1:]}")
+    return '\n'.join(changes) if changes else "No changes detected."
+
+# Unified route to explain and compare code
 @app.route('/dynamic-explain', methods=['POST', 'OPTIONS'])
 def dynamic_explain_code():
     if request.method == 'OPTIONS':
-        return jsonify({'status': 'OK'}), 200  # Handle preflight
+        return jsonify({'status': 'OK'}), 200
 
     data = request.json
     new_code = data.get('new_code')
     old_code = data.get('old_code', '')
 
+    # Get explanation and human-readable diff
     explanation = openai_explain_code(new_code)
-    diff = difflib.unified_diff(old_code.splitlines(), new_code.splitlines(), lineterm='')
-    diff_str = '\n'.join(diff)
+    diff = human_readable_diff(old_code, new_code)
 
     return jsonify({
         'explanation': explanation,
-        'diff': diff_str
+        'diff': diff
     }), 200
 
 if __name__ == '__main__':
