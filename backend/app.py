@@ -9,7 +9,7 @@ import spacy
 from spacy.cli import download
 
 app = Flask(__name__)
-frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000/')
+frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000/')  # Update this to your Netlify frontend URL
 CORS(app, origins=[frontend_url])  # Enable CORS to allow frontend interaction
 
 # Set your OpenAI API key here
@@ -50,8 +50,9 @@ def openai_explain_code(code):
         return explanation
     except RateLimitError:
         print("Rate limit exceeded. Falling back to spaCy.")
-        return use_spacy_for_explanation(user_input)
-    
+        return use_spacy_for_explanation(code)  # Pass `code` instead of `user_input`
+
+# Fallback function using spaCy if OpenAI fails
 def use_spacy_for_explanation(user_input):
     doc = nlp(user_input)
     entities = [(ent.text, ent.label_) for ent in doc.ents]
@@ -63,33 +64,26 @@ def use_spacy_for_explanation(user_input):
         "summary": f"Found {len(entities)} entities and {len(tokens)} tokens in the input."
     }
     
-    return {"explanation": explanation}
+    return explanation
 
-# Route to explain the code using OpenAI
-@app.route('/dynamic-explain', methods=['POST'])
+# Unified route to explain the code and provide difference
+@app.route('/dynamic-explain', methods=['POST', 'OPTIONS'])
 def dynamic_explain_code():
     data = request.json
     new_code = data.get('new_code')
+    old_code = data.get('old_code', '')
 
+    # Generate explanation using OpenAI or spaCy
     explanation = openai_explain_code(new_code)
-
-    return jsonify({'explanation': explanation}), 200
-
-# Route to compare old and new code, explain the difference and its impact
-@app.route('/explain-impact', methods=['POST'])
-def explain_code_impact():
-    data = request.json
-    old_code = data.get('old_code')
-    new_code = data.get('new_code')
-
-    # Compare old and new code
+    
+    # Generate difference between old and new code
     diff = difflib.unified_diff(old_code.splitlines(), new_code.splitlines(), lineterm='')
     diff_str = '\n'.join(diff)
 
-    # Use OpenAI to explain the new code
-    impact = openai_explain_code(new_code)
-
-    return jsonify({'diff': diff_str, 'impact': impact}), 200
+    return jsonify({
+        'explanation': explanation,
+        'diff': diff_str
+    }), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
