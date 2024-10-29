@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const CodeEditor = () => {
@@ -27,22 +27,22 @@ const CodeEditor = () => {
 	};
 
 	// Function to get explanation and difference
-	const fetchExplanationAndDifference = async (
-		currentCode: string,
-		previousCode: string
-	) => {
-		try {
-			const response = await axios.post(`${apiUrl}/dynamic-explain`, {
-				new_code: currentCode,
-				old_code: previousCode,
-			});
-			setExplanation(response.data.explanation);
-			setDifference(response.data.diff);
-		} catch (error) {
-			setExplanation('Error generating explanation.');
-			setDifference('Error generating difference.');
-		}
-	};
+	const fetchExplanationAndDifference = useCallback(
+		async (currentCode: string, previousCode: string) => {
+			try {
+				const response = await axios.post(`${apiUrl}/dynamic-explain`, {
+					new_code: currentCode,
+					old_code: previousCode,
+				});
+				setExplanation(response.data.explanation);
+				setDifference(response.data.diff);
+			} catch (error) {
+				setExplanation('Error generating explanation.');
+				setDifference('Error generating difference.');
+			}
+		},
+		[apiUrl]
+	);
 
 	// Effect to handle explanations and comparisons on code change
 	useEffect(() => {
@@ -50,7 +50,7 @@ const CodeEditor = () => {
 			fetchExplanationAndDifference(code, prevCode);
 			setPrevCode(code); // Update previous code after comparison
 		}
-	}, [code]);
+	}, [code, prevCode, fetchExplanationAndDifference]);
 
 	return (
 		<div
