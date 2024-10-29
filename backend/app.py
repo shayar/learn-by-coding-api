@@ -9,8 +9,8 @@ import spacy
 from spacy.cli import download
 
 app = Flask(__name__)
-frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000/')  # Update this to your Netlify frontend URL
-CORS(app, origins=[frontend_url])  # Enable CORS to allow frontend interaction
+frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000/')
+CORS(app, origins=[frontend_url], supports_credentials=True, allow_headers=["Content-Type"], methods=["GET", "POST", "OPTIONS"])  # Enable CORS to allow frontend interaction
 
 # Set your OpenAI API key here
 openai.api_key = os.getenv('OPENAI_API_KEY')
@@ -50,9 +50,8 @@ def openai_explain_code(code):
         return explanation
     except RateLimitError:
         print("Rate limit exceeded. Falling back to spaCy.")
-        return use_spacy_for_explanation(code)  # Pass `code` instead of `user_input`
-
-# Fallback function using spaCy if OpenAI fails
+        return use_spacy_for_explanation(code)
+    
 def use_spacy_for_explanation(user_input):
     doc = nlp(user_input)
     entities = [(ent.text, ent.label_) for ent in doc.ents]
