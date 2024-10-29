@@ -10,13 +10,11 @@ const CodeEditor = () => {
 
 	const apiUrl = process.env.REACT_APP_API_URL;
 
-	// Function to handle code changes
 	const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
 		const newCode = e.target.value;
 		setCode(newCode);
 	};
 
-	// Function to run the code
 	const runCode = async () => {
 		try {
 			const response = await axios.post(`${apiUrl}/run`, { code });
@@ -26,7 +24,6 @@ const CodeEditor = () => {
 		}
 	};
 
-	// Function to get explanation and difference
 	const fetchExplanationAndDifference = useCallback(
 		async (currentCode: string, previousCode: string) => {
 			try {
@@ -34,8 +31,16 @@ const CodeEditor = () => {
 					new_code: currentCode,
 					old_code: previousCode,
 				});
-				setExplanation(response.data.explanation);
-				setDifference(response.data.diff);
+				setExplanation(
+					typeof response.data.explanation === 'object'
+						? JSON.stringify(response.data.explanation, null, 2)
+						: response.data.explanation
+				);
+				setDifference(
+					typeof response.data.diff === 'object'
+						? JSON.stringify(response.data.diff, null, 2)
+						: response.data.diff
+				);
 			} catch (error) {
 				setExplanation('Error generating explanation.');
 				setDifference('Error generating difference.');
@@ -44,11 +49,10 @@ const CodeEditor = () => {
 		[apiUrl]
 	);
 
-	// Effect to handle explanations and comparisons on code change
 	useEffect(() => {
 		if (code && code !== prevCode) {
 			fetchExplanationAndDifference(code, prevCode);
-			setPrevCode(code); // Update previous code after comparison
+			setPrevCode(code);
 		}
 	}, [code, prevCode, fetchExplanationAndDifference]);
 
