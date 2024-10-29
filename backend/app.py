@@ -9,7 +9,7 @@ import spacy
 from spacy.cli import download
 
 app = Flask(__name__)
-frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000/')
+frontend_url = os.getenv('FRONTEND_URL', 'https://learn-by-coding.netlify.app')
 CORS(app, origins=[frontend_url], supports_credentials=True, allow_headers=["Content-Type"], methods=["GET", "POST", "OPTIONS"])
 
 openai.api_key = os.getenv('OPENAI_API_KEY')
@@ -32,12 +32,12 @@ def run_code():
     except subprocess.CalledProcessError as e:
         return jsonify({'error': e.output.decode('utf-8')}), 400
 
-# Generate a detailed explanation using OpenAI
+# Generate a full explanation of the entire code
 def openai_explain_code(code):
     try:
         response = openai.Completion.create(
             model="gpt-3.5-turbo",
-            prompt=f"Explain the following Python code in detail:\n{code}\nExplain each line clearly.",
+            prompt=f"Explain in detail what this entire Python code does:\n{code}",
             temperature=0.5,
             max_tokens=200
         )
@@ -54,16 +54,13 @@ def use_spacy_for_explanation(user_input):
     explanation += f"{' '.join([token.text for token in doc])}"
     return explanation
 
-# Generate a human-readable diff
-def human_readable_diff(old_code, new_code):
-    diff = difflib.unified_diff(old_code.splitlines(), new_code.splitlines(), lineterm='')
-    changes = []
-    for line in diff:
-        if line.startswith('-'):
-            changes.append(f"Removed: {line[1:]}")
-        elif line.startswith('+'):
-            changes.append(f"Added: {line[1:]}")
-    return '\n'.join(changes) if changes else "No changes detected."
+# Generate a human-readable diff that focuses on the new line addition
+def new_line_difference(old_code, new_code):
+    diff = difflib.ndiff(old_code.splitlines(), new_code.splitlines())
+    added_lines = [line[2:] for line in diff if line.startswith('+ ')]
+    if added_lines:
+        return f"The new line added to the code: {', '.join(added_lines)}"
+    return "No new lines were added."
 
 # Unified route to explain and compare code
 @app.route('/dynamic-explain', methods=['POST', 'OPTIONS'])
@@ -75,9 +72,9 @@ def dynamic_explain_code():
     new_code = data.get('new_code')
     old_code = data.get('old_code', '')
 
-    # Get explanation and human-readable diff
+    # Get full code explanation and the difference for the new line
     explanation = openai_explain_code(new_code)
-    diff = human_readable_diff(old_code, new_code)
+    diff = new_line_difference(old_code, new_code)
 
     return jsonify({
         'explanation': explanation,
