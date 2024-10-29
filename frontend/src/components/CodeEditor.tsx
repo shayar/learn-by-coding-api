@@ -11,7 +11,7 @@ const CodeEditor = () => {
 	const apiUrl = process.env.REACT_APP_API_URL;
 
 	// Function to handle code changes
-	const handleCodeChange = (e) => {
+	const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
 		const newCode = e.target.value;
 		setCode(newCode);
 	};
@@ -27,7 +27,10 @@ const CodeEditor = () => {
 	};
 
 	// Function to get explanation and difference
-	const fetchExplanationAndDifference = async (currentCode, previousCode) => {
+	const fetchExplanationAndDifference = async (
+		currentCode: string,
+		previousCode: string
+	) => {
 		try {
 			const response = await axios.post(`${apiUrl}/dynamic-explain`, {
 				new_code: currentCode,
