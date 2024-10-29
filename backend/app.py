@@ -10,13 +10,12 @@ from spacy.cli import download
 
 app = Flask(__name__)
 frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000/')
-CORS(app, origins=[frontend_url], supports_credentials=True, allow_headers=["Content-Type"], methods=["GET", "POST", "OPTIONS"])  # Enable CORS to allow frontend interaction
+CORS(app, origins=[frontend_url], supports_credentials=True, allow_headers=["Content-Type"], methods=["GET", "POST", "OPTIONS"])
 
 # Set your OpenAI API key here
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # spaCy Model Handling
-# Try to load the model, download if it's not available
 try:
     nlp = spacy.load("en_core_web_sm")
 except OSError:
@@ -29,9 +28,7 @@ except OSError:
 def run_code():
     data = request.json
     code = data.get('code')
-
     try:
-        # Execute the Python code
         output = subprocess.check_output(['python', '-c', code], stderr=subprocess.STDOUT)
         return jsonify({'output': output.decode('utf-8')}), 200
     except subprocess.CalledProcessError as e:
@@ -51,7 +48,8 @@ def openai_explain_code(code):
     except RateLimitError:
         print("Rate limit exceeded. Falling back to spaCy.")
         return use_spacy_for_explanation(code)
-    
+
+# Fallback function using spaCy if OpenAI fails
 def use_spacy_for_explanation(user_input):
     doc = nlp(user_input)
     entities = [(ent.text, ent.label_) for ent in doc.ents]
@@ -68,14 +66,14 @@ def use_spacy_for_explanation(user_input):
 # Unified route to explain the code and provide difference
 @app.route('/dynamic-explain', methods=['POST', 'OPTIONS'])
 def dynamic_explain_code():
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'OK'}), 200  # Handle preflight
+
     data = request.json
     new_code = data.get('new_code')
     old_code = data.get('old_code', '')
 
-    # Generate explanation using OpenAI or spaCy
     explanation = openai_explain_code(new_code)
-    
-    # Generate difference between old and new code
     diff = difflib.unified_diff(old_code.splitlines(), new_code.splitlines(), lineterm='')
     diff_str = '\n'.join(diff)
 
